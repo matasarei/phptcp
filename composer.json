@@ -1,0 +1,30 @@
+{
+    "name": "matasarei/phptcp",
+    "description": "A TCP client for PHP",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Yevhen Matasar",
+            "email": "matasar.ei@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.1",
+        "ext-json": "*",
+        "psr/log": "^1.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Matasar\\PhpTcp\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Stub\\": "tests/Stub"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^7"
+    }
+}
