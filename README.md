@@ -1,4 +1,6 @@
 # PHP TCP
+![example workflow](https://github.com/matasarei/phptcp/actions/workflows/tests.yml/badge.svg)
+
 A TCP client for PHP. This is a demo library: it is provided as is, without any guarantees.
 
 ## Basic usage
