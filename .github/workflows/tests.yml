@@ -1,0 +1,21 @@
+name: Tests
+
+on: [push]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Composer
+        uses: php-actions/composer@v5
+        with:
+          php_version: 7.4
+      - name: PHPUnit Tests
+        uses: php-actions/phpunit@v2
+        with:
+          version: 7
+          php_version: 7.4
+          bootstrap: vendor/autoload.php
+          configuration: phpunit.xml
