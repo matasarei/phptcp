@@ -2,7 +2,7 @@
 
 namespace Matasar\PhpTcp\Exception;
 
-use PHPUnit\Runner\Exception;
+use Exception;
 
 class ConnectionException extends Exception
 {
