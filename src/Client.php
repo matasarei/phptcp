@@ -202,6 +202,8 @@ class Client implements LoggerAwareInterface
             $timePassed = (microtime(true) - $timeStart);
 
             if ($timePassed > $timeout) {
+                $this->disconnect();
+
                 throw new RequestException('Request timeout \ no response.');
             }
 
@@ -209,6 +211,8 @@ class Client implements LoggerAwareInterface
         }
 
         if ($response === false) {
+            $this->disconnect();
+
             throw new ConnectionException('Request failed, broken connection.');
         }
 
