@@ -13,14 +13,19 @@ use Psr\Log\NullLogger;
 class Client implements LoggerAwareInterface
 {
     /**
-     * Default value 1 ms (1000 microseconds)
+     * Default poll interval: 1 ms (1000 microseconds)
      */
-    const DEFAULT_CONNECTION_LAG = 1000;
+    const DEFAULT_POLL_INTERVAL = 1000;
 
     /**
-     * Bytes per chunk
+     * @deprecated Use DEFAULT_POLL_INTERVAL instead
      */
-    const DEFAULT_CHUNK_SIZE = 1024;
+    const DEFAULT_CONNECTION_LAG = self::DEFAULT_POLL_INTERVAL;
+
+    /**
+     * Bytes per chunk; matches the size of PHP's internal stream read buffer
+     */
+    const DEFAULT_CHUNK_SIZE = 8192;
 
     /**
      * Default timeout in sec
@@ -50,7 +55,7 @@ class Client implements LoggerAwareInterface
     /**
      * @var int
      */
-    private $connectionLag;
+    private $pollInterval;
 
     /**
      * @var LoggerInterface
@@ -62,6 +67,11 @@ class Client implements LoggerAwareInterface
      */
     private $socketInterface;
 
+    /**
+     * @var string|null
+     */
+    private $delimiter;
+
     public function __construct(string $host, int $port, SocketInterface $socketInterface)
     {
         $this->host = $host;
@@ -71,10 +81,11 @@ class Client implements LoggerAwareInterface
         $this->stream = null;
         $this->logger = new NullLogger();
         $this->chunkSize = self::DEFAULT_CHUNK_SIZE;
-        $this->connectionLag = self::DEFAULT_CONNECTION_LAG;
+        $this->pollInterval = self::DEFAULT_POLL_INTERVAL;
+        $this->delimiter = null;
     }
 
-    public function setLogger(LoggerInterface $logger)
+    public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
     }
@@ -88,11 +99,33 @@ class Client implements LoggerAwareInterface
     }
 
     /**
-     * @param int $connectionLag Connection lag in microseconds
+     * @param int $pollInterval Pause between data availability checks, in microseconds
+     */
+    public function setPollInterval(int $pollInterval): void
+    {
+        $this->pollInterval = $pollInterval;
+    }
+
+    /**
+     * @deprecated Use setPollInterval() instead
+     *
+     * @param int $connectionLag Poll interval in microseconds
      */
     public function setConnectionLag(int $connectionLag): void
     {
-        $this->connectionLag = $connectionLag;
+        $this->setPollInterval($connectionLag);
+    }
+
+    /**
+     * When a delimiter is set, a response is considered complete as soon as it ends with the delimiter
+     * (e.g. "\n" for line-based protocols), instead of waiting for a silent interval on the stream.
+     * The delimiter is kept at the end of the response data.
+     *
+     * @param string|null $delimiter End-of-response marker, or null to detect the end by a pause in the data flow
+     */
+    public function setDelimiter(?string $delimiter): void
+    {
+        $this->delimiter = '' === $delimiter ? null : $delimiter;
     }
 
     public function isConnected(): bool
@@ -155,9 +188,48 @@ class Client implements LoggerAwareInterface
         }
 
         $this->logger->debug(sprintf('TCP: Sending a request to %s...', $this->host), ['request' => $request]);
-        fwrite($this->stream, $request->getBody() . "\r\n");
+        $this->write($request->getBody() . "\r\n", $request->getTimeout());
 
         return new Response($this->read($request->getTimeout()));
+    }
+
+    /**
+     * @param string $data
+     * @param int $timeout Send timeout in seconds
+     *
+     * @throws ConnectionException
+     * @throws RequestException
+     */
+    private function write(string $data, int $timeout): void
+    {
+        $length = strlen($data);
+        $written = 0;
+        $timeStart = microtime(true);
+
+        while ($written < $length) {
+            $bytes = fwrite($this->stream, substr($data, $written));
+
+            if (false === $bytes) {
+                $this->disconnect();
+
+                throw new ConnectionException('Request failed, unable to write to the stream.');
+            }
+
+            if (0 === $bytes) {
+                // the send buffer may be full (non-blocking mode); retry until the timeout
+                if ((microtime(true) - $timeStart) > $timeout) {
+                    $this->disconnect();
+
+                    throw new RequestException('Request timeout, unable to send the request.');
+                }
+
+                usleep($this->pollInterval);
+
+                continue;
+            }
+
+            $written += $bytes;
+        }
     }
 
     /**
@@ -173,16 +245,58 @@ class Client implements LoggerAwareInterface
         $data = $this->wait($timeout);
         $timeStart = microtime(true);
 
-        while (($chunk = fread($this->stream, $this->chunkSize)) !== '') {
-            $data .= $chunk;
+        while (!$this->isComplete($data)) {
+            $chunk = fread($this->stream, $this->chunkSize);
 
-            usleep($this->connectionLag);
+            if (false === $chunk) {
+                $this->disconnect();
+
+                throw new ConnectionException('Request failed, broken connection.');
+            }
+
+            if ('' !== $chunk) {
+                $data .= $chunk;
+
+                continue;
+            }
+
+            if (feof($this->stream)) {
+                if (null !== $this->delimiter) {
+                    $this->disconnect();
+
+                    throw new ConnectionException('Request failed, connection closed before the response was completed.');
+                }
+
+                break;
+            }
+
+            if (null === $this->delimiter) {
+                // no delimiter to look for: a pause in the data flow marks the end of the response
+                break;
+            }
+
+            if ((microtime(true) - $timeStart) > $timeout) {
+                $this->disconnect();
+
+                throw new RequestException('Request timeout, incomplete response.');
+            }
+
+            usleep($this->pollInterval);
         }
 
         $timePassed = (microtime(true) - $timeStart);
         $this->logger->debug(sprintf('TCP: Data transfer took %.5f sec.', $timePassed));
 
         return $data;
+    }
+
+    private function isComplete(string $data): bool
+    {
+        if (null === $this->delimiter) {
+            return false;
+        }
+
+        return substr($data, -strlen($this->delimiter)) === $this->delimiter;
     }
 
     /**
@@ -199,6 +313,12 @@ class Client implements LoggerAwareInterface
         $timePassed = 0;
 
         while (($response = fread($this->stream, 1)) === '') {
+            if (feof($this->stream)) {
+                $this->disconnect();
+
+                throw new ConnectionException('Request failed, connection closed by peer.');
+            }
+
             $timePassed = (microtime(true) - $timeStart);
 
             if ($timePassed > $timeout) {
@@ -207,7 +327,7 @@ class Client implements LoggerAwareInterface
                 throw new RequestException('Request timeout \ no response.');
             }
 
-            usleep($this->connectionLag);
+            usleep($this->pollInterval);
         }
 
         if ($response === false) {

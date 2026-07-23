@@ -70,6 +70,99 @@ class ClientTest extends TestCase
         $client->request(new Request('', 1));
     }
 
+    public function testBrokenStreamDuringRead()
+    {
+        ServerStub::setResponse('connected');
+
+        $client = $this->createClient();
+        $client->connect();
+
+        ServerStub::setResponse('partial response');
+        ServerStub::breakAfter(4);
+
+        $this->expectException(ConnectionException::class);
+
+        $client->request(new Request('', 1));
+    }
+
+    public function testConnectionClosedByPeer()
+    {
+        ServerStub::setResponse('connected');
+
+        $client = $this->createClient();
+        $client->connect();
+
+        ServerStub::setResponse('');
+        ServerStub::close();
+
+        $this->expectException(ConnectionException::class);
+
+        $client->request(new Request('', 10));
+    }
+
+    public function testDelimiterFraming()
+    {
+        ServerStub::setResponse("connected\n");
+
+        $client = $this->createClient();
+        $client->setDelimiter("\n");
+
+        $this->assertEquals("connected\n", $client->connect()->getData());
+
+        ServerStub::setResponse("{\"result\":\"ok\"}\n");
+
+        $response = $client->request(new Request('request', 1));
+
+        $this->assertEquals("{\"result\":\"ok\"}\n", $response->getData());
+        $this->assertEquals('request', ServerStub::getRequest());
+    }
+
+    public function testDelimiterConnectionClosedBeforeCompleteResponse()
+    {
+        ServerStub::setResponse('connected');
+
+        $client = $this->createClient();
+        $client->connect();
+
+        $client->setDelimiter("\n");
+        ServerStub::setResponse('{"result":');
+        ServerStub::close();
+
+        $this->expectException(ConnectionException::class);
+
+        $client->request(new Request('', 5));
+    }
+
+    public function testDelimiterTimeoutOnIncompleteResponse()
+    {
+        ServerStub::setResponse('connected');
+
+        $client = $this->createClient();
+        $client->connect();
+
+        $client->setDelimiter("\n");
+        ServerStub::setResponse('incomplete response');
+        ServerStub::setReplay(false);
+
+        $this->expectException(RequestException::class);
+
+        $client->request(new Request('', 1));
+    }
+
+    public function testPartialWrites()
+    {
+        ServerStub::setResponse('connected');
+
+        $client = $this->createClient();
+        $client->connect();
+
+        ServerStub::setWriteLimit(3);
+
+        $client->request(new Request('chunked request body', 1));
+
+        $this->assertEquals('chunked request body', ServerStub::getRequest());
+    }
+
     public function testConnectionFailed()
     {
         $client = $this->createClient();
@@ -88,12 +181,12 @@ class ClientTest extends TestCase
         $this->assertEquals('connected', $client->connect()->getData());
     }
 
-    protected function setUp()
+    protected function setUp(): void
     {
         ServerStub::start();
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         ServerStub::reset();
         ServerStub::stop();

@@ -1,21 +1,31 @@
 name: Tests
 
-on: [push]
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 jobs:
-  build-test:
+  tests:
+    name: PHP ${{ matrix.php }}
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4', '8.5']
+
     steps:
-      - uses: actions/checkout@v2
-      - name: Composer
-        uses: php-actions/composer@v5
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
         with:
-          php_version: 7.4
-      - name: PHPUnit Tests
-        uses: php-actions/phpunit@v2
-        with:
-          version: 7
-          php_version: 7.4
-          bootstrap: vendor/autoload.php
-          configuration: phpunit.xml
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --no-progress --no-interaction --prefer-dist
+
+      - name: Run tests
+        run: vendor/bin/phpunit
