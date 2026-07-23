@@ -7,6 +7,11 @@ use RuntimeException;
 class ServerStub
 {
     /**
+     * @var resource|null Set by PHP's stream wrapper machinery
+     */
+    public $context;
+
+    /**
      * @var string
      */
     private static $request = '';

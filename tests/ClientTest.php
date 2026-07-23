@@ -164,12 +164,12 @@ class ClientTest extends TestCase
         $this->assertEquals('connected', $client->connect()->getData());
     }
 
-    protected function setUp()
+    protected function setUp(): void
     {
         ServerStub::start();
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         ServerStub::reset();
         ServerStub::stop();
