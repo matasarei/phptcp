@@ -62,6 +62,11 @@ class Client implements LoggerAwareInterface
      */
     private $socketInterface;
 
+    /**
+     * @var string|null
+     */
+    private $delimiter;
+
     public function __construct(string $host, int $port, SocketInterface $socketInterface)
     {
         $this->host = $host;
@@ -72,6 +77,7 @@ class Client implements LoggerAwareInterface
         $this->logger = new NullLogger();
         $this->chunkSize = self::DEFAULT_CHUNK_SIZE;
         $this->connectionLag = self::DEFAULT_CONNECTION_LAG;
+        $this->delimiter = null;
     }
 
     public function setLogger(LoggerInterface $logger)
@@ -93,6 +99,18 @@ class Client implements LoggerAwareInterface
     public function setConnectionLag(int $connectionLag): void
     {
         $this->connectionLag = $connectionLag;
+    }
+
+    /**
+     * When a delimiter is set, a response is considered complete as soon as it ends with the delimiter
+     * (e.g. "\n" for line-based protocols), instead of waiting for a silent interval on the stream.
+     * The delimiter is kept at the end of the response data.
+     *
+     * @param string|null $delimiter End-of-response marker, or null to detect the end by a pause in the data flow
+     */
+    public function setDelimiter(?string $delimiter): void
+    {
+        $this->delimiter = '' === $delimiter ? null : $delimiter;
     }
 
     public function isConnected(): bool
@@ -155,9 +173,32 @@ class Client implements LoggerAwareInterface
         }
 
         $this->logger->debug(sprintf('TCP: Sending a request to %s...', $this->host), ['request' => $request]);
-        fwrite($this->stream, $request->getBody() . "\r\n");
+        $this->write($request->getBody() . "\r\n");
 
         return new Response($this->read($request->getTimeout()));
+    }
+
+    /**
+     * @param string $data
+     *
+     * @throws ConnectionException
+     */
+    private function write(string $data): void
+    {
+        $length = strlen($data);
+        $written = 0;
+
+        while ($written < $length) {
+            $bytes = fwrite($this->stream, substr($data, $written));
+
+            if (false === $bytes || 0 === $bytes) {
+                $this->disconnect();
+
+                throw new ConnectionException('Request failed, unable to write to the stream.');
+            }
+
+            $written += $bytes;
+        }
     }
 
     /**
@@ -173,8 +214,35 @@ class Client implements LoggerAwareInterface
         $data = $this->wait($timeout);
         $timeStart = microtime(true);
 
-        while (($chunk = fread($this->stream, $this->chunkSize)) !== '') {
-            $data .= $chunk;
+        while (!$this->isComplete($data)) {
+            $chunk = fread($this->stream, $this->chunkSize);
+
+            if (false === $chunk) {
+                $this->disconnect();
+
+                throw new ConnectionException('Request failed, broken connection.');
+            }
+
+            if ('' !== $chunk) {
+                $data .= $chunk;
+
+                continue;
+            }
+
+            if (feof($this->stream)) {
+                break;
+            }
+
+            if (null === $this->delimiter) {
+                // no delimiter to look for: a pause in the data flow marks the end of the response
+                break;
+            }
+
+            if ((microtime(true) - $timeStart) > $timeout) {
+                $this->disconnect();
+
+                throw new RequestException('Request timeout, incomplete response.');
+            }
 
             usleep($this->connectionLag);
         }
@@ -183,6 +251,15 @@ class Client implements LoggerAwareInterface
         $this->logger->debug(sprintf('TCP: Data transfer took %.5f sec.', $timePassed));
 
         return $data;
+    }
+
+    private function isComplete(string $data): bool
+    {
+        if (null === $this->delimiter) {
+            return false;
+        }
+
+        return substr($data, -strlen($this->delimiter)) === $this->delimiter;
     }
 
     /**
@@ -199,6 +276,12 @@ class Client implements LoggerAwareInterface
         $timePassed = 0;
 
         while (($response = fread($this->stream, 1)) === '') {
+            if (feof($this->stream)) {
+                $this->disconnect();
+
+                throw new ConnectionException('Request failed, connection closed by peer.');
+            }
+
             $timePassed = (microtime(true) - $timeStart);
 
             if ($timePassed > $timeout) {

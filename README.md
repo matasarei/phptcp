@@ -41,4 +41,21 @@ $client = new Client('hostname', 1234, new FSocket());
 $client->setChunkSize(8192); // read data by 8 Kb per cycle.
 $client->setConnectionLag(5000); // 5 ms pause per cycle.
 $client->setLogger(new SomePsrLogger()); // connect a logger for debugging.
+$client->setDelimiter("\n"); // treat "\n" as the end of a response (see below).
 ```
+
+## Response framing
+By default, the client considers a response complete when the server stops sending data for a moment
+(a silent interval on the stream). This works for simple cases but has two downsides: every read costs
+an extra blocking-timeout interval, and a slow server can be cut off in the middle of a response.
+
+If your protocol marks the end of a message (e.g. line-based protocols such as JSON-RPC over TCP),
+set a delimiter instead:
+
+```php
+$client->setDelimiter("\n");
+```
+
+With a delimiter set, the client returns as soon as the response ends with the delimiter
+(the delimiter is kept in the response data), and throws a `RequestException` if a complete
+response does not arrive within the request timeout.

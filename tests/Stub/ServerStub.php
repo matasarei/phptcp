@@ -26,6 +26,26 @@ class ServerStub
      */
     private static $timeout = 0;
 
+    /**
+     * @var bool
+     */
+    private static $replay = true;
+
+    /**
+     * @var bool
+     */
+    private static $closed = false;
+
+    /**
+     * @var int
+     */
+    private static $breakAfter = 0;
+
+    /**
+     * @var int
+     */
+    private static $writeLimit = 0;
+
     public static function start()
     {
         stream_wrapper_unregister('php');
@@ -42,6 +62,11 @@ class ServerStub
         self::$timeout = 0;
         self::$response = '';
         self::$readPointer = 0;
+        self::$request = '';
+        self::$replay = true;
+        self::$closed = false;
+        self::$breakAfter = 0;
+        self::$writeLimit = 0;
     }
 
     /**
@@ -52,6 +77,39 @@ class ServerStub
     {
         self::$response = $response;
         self::$timeout = $timeout;
+        self::$readPointer = 0;
+    }
+
+    /**
+     * @param bool $replay Replay the response from the beginning once it has been fully read
+     */
+    public static function setReplay(bool $replay)
+    {
+        self::$replay = $replay;
+    }
+
+    /**
+     * Simulates a connection closed by the peer: no more data, EOF reached
+     */
+    public static function close()
+    {
+        self::$closed = true;
+    }
+
+    /**
+     * @param int $bytes Simulate a broken stream (read error) after this many bytes are read
+     */
+    public static function breakAfter(int $bytes)
+    {
+        self::$breakAfter = $bytes;
+    }
+
+    /**
+     * @param int $limit Accept at most this many bytes per write to simulate partial writes
+     */
+    public static function setWriteLimit(int $limit)
+    {
+        self::$writeLimit = $limit;
     }
 
     /**
@@ -67,10 +125,14 @@ class ServerStub
     /**
      * @param int $count Always 8192 bytes
      *
-     * @return string
+     * @return string|false
      */
     public function stream_read(int $count)
     {
+        if (self::$closed) {
+            return '';
+        }
+
         if (self::$timeout > 0) {
             sleep(1);
             self::$timeout--;
@@ -78,9 +140,13 @@ class ServerStub
             return '';
         }
 
-        $data = trim(self::$response);
+        $data = self::$response;
 
         if ('' === $data) {
+            return false;
+        }
+
+        if (self::$breakAfter > 0 && self::$readPointer >= self::$breakAfter) {
             return false;
         }
 
@@ -88,12 +154,19 @@ class ServerStub
         $pointer = self::$readPointer;
 
         if ($pointer > $length) {
-            self::$readPointer = 0;
+            if (self::$replay) {
+                self::$readPointer = 0;
+            }
 
             return '';
         }
 
         $chunkSize = $length < $count ? $length : $count;
+
+        if (self::$breakAfter > 0) {
+            $chunkSize = min($chunkSize, self::$breakAfter - $pointer);
+        }
+
         $chunk = substr($data, $pointer, $chunkSize);
 
         self::$readPointer += $chunkSize;
@@ -103,9 +176,13 @@ class ServerStub
 
     public function stream_write($data)
     {
-        self::$request = $data;
+        if (self::$writeLimit > 0 && strlen($data) > self::$writeLimit) {
+            $data = substr($data, 0, self::$writeLimit);
+        }
 
-        return mb_strlen(self::$request);
+        self::$request .= $data;
+
+        return strlen($data);
     }
 
     public function stream_seek()
@@ -115,7 +192,7 @@ class ServerStub
 
     public function stream_eof()
     {
-        return false;
+        return self::$closed;
     }
 
     public function stream_open($path, $mode, $options, &$opened_path)
