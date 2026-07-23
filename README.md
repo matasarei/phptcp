@@ -80,8 +80,8 @@ use Matasar\PhpTcp\Socket\FSocket;
 
 $client = new Client('hostname', 1234, new FSocket());
 
-$client->setChunkSize(8192);         // read data by 8 KB per cycle.
-$client->setConnectionLag(5000);     // 5 ms pause per read cycle.
+$client->setChunkSize(16384);        // read data by 16 KB per cycle (default 8 KB).
+$client->setPollInterval(5000);      // wait 5 ms between data availability checks (default 1 ms).
 $client->setDelimiter("\n");         // treat "\n" as the end of a response (see below).
 $client->setLogger(new PsrLogger()); // any PSR-3 logger, for debugging.
 

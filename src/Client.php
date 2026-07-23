@@ -13,14 +13,19 @@ use Psr\Log\NullLogger;
 class Client implements LoggerAwareInterface
 {
     /**
-     * Default value 1 ms (1000 microseconds)
+     * Default poll interval: 1 ms (1000 microseconds)
      */
-    const DEFAULT_CONNECTION_LAG = 1000;
+    const DEFAULT_POLL_INTERVAL = 1000;
 
     /**
-     * Bytes per chunk
+     * @deprecated Use DEFAULT_POLL_INTERVAL instead
      */
-    const DEFAULT_CHUNK_SIZE = 1024;
+    const DEFAULT_CONNECTION_LAG = self::DEFAULT_POLL_INTERVAL;
+
+    /**
+     * Bytes per chunk; matches the size of PHP's internal stream read buffer
+     */
+    const DEFAULT_CHUNK_SIZE = 8192;
 
     /**
      * Default timeout in sec
@@ -50,7 +55,7 @@ class Client implements LoggerAwareInterface
     /**
      * @var int
      */
-    private $connectionLag;
+    private $pollInterval;
 
     /**
      * @var LoggerInterface
@@ -76,7 +81,7 @@ class Client implements LoggerAwareInterface
         $this->stream = null;
         $this->logger = new NullLogger();
         $this->chunkSize = self::DEFAULT_CHUNK_SIZE;
-        $this->connectionLag = self::DEFAULT_CONNECTION_LAG;
+        $this->pollInterval = self::DEFAULT_POLL_INTERVAL;
         $this->delimiter = null;
     }
 
@@ -94,11 +99,21 @@ class Client implements LoggerAwareInterface
     }
 
     /**
-     * @param int $connectionLag Connection lag in microseconds
+     * @param int $pollInterval Pause between data availability checks, in microseconds
+     */
+    public function setPollInterval(int $pollInterval): void
+    {
+        $this->pollInterval = $pollInterval;
+    }
+
+    /**
+     * @deprecated Use setPollInterval() instead
+     *
+     * @param int $connectionLag Poll interval in microseconds
      */
     public function setConnectionLag(int $connectionLag): void
     {
-        $this->connectionLag = $connectionLag;
+        $this->setPollInterval($connectionLag);
     }
 
     /**
@@ -244,7 +259,7 @@ class Client implements LoggerAwareInterface
                 throw new RequestException('Request timeout, incomplete response.');
             }
 
-            usleep($this->connectionLag);
+            usleep($this->pollInterval);
         }
 
         $timePassed = (microtime(true) - $timeStart);
@@ -290,7 +305,7 @@ class Client implements LoggerAwareInterface
                 throw new RequestException('Request timeout \ no response.');
             }
 
-            usleep($this->connectionLag);
+            usleep($this->pollInterval);
         }
 
         if ($response === false) {
