@@ -1,21 +1,18 @@
 name: Tests
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build-test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
       - name: Composer
-        uses: php-actions/composer@v5
-        with:
-          php_version: 7.4
+        run: composer install --no-progress --no-interaction
       - name: PHPUnit Tests
-        uses: php-actions/phpunit@v2
-        with:
-          version: 7
-          php_version: 7.4
-          bootstrap: vendor/autoload.php
-          configuration: phpunit.xml
+        run: vendor/bin/phpunit --configuration phpunit.xml
