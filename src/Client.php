@@ -188,28 +188,44 @@ class Client implements LoggerAwareInterface
         }
 
         $this->logger->debug(sprintf('TCP: Sending a request to %s...', $this->host), ['request' => $request]);
-        $this->write($request->getBody() . "\r\n");
+        $this->write($request->getBody() . "\r\n", $request->getTimeout());
 
         return new Response($this->read($request->getTimeout()));
     }
 
     /**
      * @param string $data
+     * @param int $timeout Send timeout in seconds
      *
      * @throws ConnectionException
+     * @throws RequestException
      */
-    private function write(string $data): void
+    private function write(string $data, int $timeout): void
     {
         $length = strlen($data);
         $written = 0;
+        $timeStart = microtime(true);
 
         while ($written < $length) {
             $bytes = fwrite($this->stream, substr($data, $written));
 
-            if (false === $bytes || 0 === $bytes) {
+            if (false === $bytes) {
                 $this->disconnect();
 
                 throw new ConnectionException('Request failed, unable to write to the stream.');
+            }
+
+            if (0 === $bytes) {
+                // the send buffer may be full (non-blocking mode); retry until the timeout
+                if ((microtime(true) - $timeStart) > $timeout) {
+                    $this->disconnect();
+
+                    throw new RequestException('Request timeout, unable to send the request.');
+                }
+
+                usleep($this->pollInterval);
+
+                continue;
             }
 
             $written += $bytes;
@@ -245,6 +261,12 @@ class Client implements LoggerAwareInterface
             }
 
             if (feof($this->stream)) {
+                if (null !== $this->delimiter) {
+                    $this->disconnect();
+
+                    throw new ConnectionException('Request failed, connection closed before the response was completed.');
+                }
+
                 break;
             }
 

@@ -103,8 +103,9 @@ $client->setDelimiter("\n");
 ```
 
 With a delimiter set, the client returns as soon as the response ends with the delimiter
-(the delimiter is kept in the response data), and throws a `RequestException` if a complete
-response does not arrive within the request timeout.
+(the delimiter is kept in the response data). It throws a `RequestException` if a complete
+response does not arrive within the request timeout, and a `ConnectionException` if the
+connection is closed before the response is completed.
 
 ## Error handling
 

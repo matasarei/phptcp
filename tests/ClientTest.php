@@ -92,6 +92,7 @@ class ClientTest extends TestCase
         $client = $this->createClient();
         $client->connect();
 
+        ServerStub::setResponse('');
         ServerStub::close();
 
         $this->expectException(ConnectionException::class);
@@ -114,6 +115,22 @@ class ClientTest extends TestCase
 
         $this->assertEquals("{\"result\":\"ok\"}\n", $response->getData());
         $this->assertEquals('request', ServerStub::getRequest());
+    }
+
+    public function testDelimiterConnectionClosedBeforeCompleteResponse()
+    {
+        ServerStub::setResponse('connected');
+
+        $client = $this->createClient();
+        $client->connect();
+
+        $client->setDelimiter("\n");
+        ServerStub::setResponse('{"result":');
+        ServerStub::close();
+
+        $this->expectException(ConnectionException::class);
+
+        $client->request(new Request('', 5));
     }
 
     public function testDelimiterTimeoutOnIncompleteResponse()

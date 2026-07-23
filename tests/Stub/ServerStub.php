@@ -94,7 +94,8 @@ class ServerStub
     }
 
     /**
-     * Simulates a connection closed by the peer: no more data, EOF reached
+     * Simulates a connection closed by the peer: any remaining response data
+     * is still readable, then the stream reports EOF
      */
     public static function close()
     {
@@ -134,10 +135,6 @@ class ServerStub
      */
     public function stream_read(int $count)
     {
-        if (self::$closed) {
-            return '';
-        }
-
         if (self::$timeout > 0) {
             sleep(1);
             self::$timeout--;
@@ -148,7 +145,7 @@ class ServerStub
         $data = self::$response;
 
         if ('' === $data) {
-            return false;
+            return self::$closed ? '' : false;
         }
 
         if (self::$breakAfter > 0 && self::$readPointer >= self::$breakAfter) {
@@ -159,7 +156,7 @@ class ServerStub
         $pointer = self::$readPointer;
 
         if ($pointer > $length) {
-            if (self::$replay) {
+            if (self::$replay && !self::$closed) {
                 self::$readPointer = 0;
             }
 
@@ -197,7 +194,7 @@ class ServerStub
 
     public function stream_eof()
     {
-        return self::$closed;
+        return self::$closed && ('' === self::$response || self::$readPointer > strlen(self::$response));
     }
 
     public function stream_open($path, $mode, $options, &$opened_path)
