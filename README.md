@@ -133,7 +133,16 @@ try {
 
 ## Testing
 
-The test suite runs against PHP 7.4–8.5 in CI. Locally:
+The test suite runs against PHP 7.4–8.5 in CI.
+
+Locally, the easiest way is Docker — no PHP or Composer installation required:
+
+```bash
+docker run --rm -v $(pwd):/app -w /app composer:lts composer install
+docker run --rm -v $(pwd):/app -w /app composer:lts vendor/bin/phpunit
+```
+
+Or with a local PHP setup:
 
 ```bash
 composer install
