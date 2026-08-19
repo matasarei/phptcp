@@ -3,6 +3,7 @@
     "description": "Lightweight TCP client for PHP with pluggable socket transports, configurable timeouts, delimiter-based response framing and PSR-3 logging",
     "type": "library",
     "keywords": [
+        "php",
         "tcp",
         "tcp-client",
         "socket",
