@@ -18,7 +18,16 @@ class StreamSocket implements SocketInterface
 
     public function connect(string $host, string $port, ?float $timeout)
     {
-        $address = sprintf('%s:%d', $host, $port);
+        if (false !== strpos($host, '://')) {
+            throw new SocketException(sprintf('Host must not contain a transport scheme, got "%s"', $host));
+        }
+
+        if (false !== strpos($host, ':') && '[' !== substr($host, 0, 1)) {
+            // an IPv6 literal: bracket it so its colons do not run into the port
+            $host = sprintf('[%s]', $host);
+        }
+
+        $address = sprintf('tcp://%s:%d', $host, $port);
         $stream = stream_socket_client($address, $errorCode, $errorMessage, $timeout);
 
         if (false === $stream) {

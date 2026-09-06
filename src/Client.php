@@ -33,6 +33,11 @@ class Client implements LoggerAwareInterface
     const DEFAULT_TIMEOUT = 2;
 
     /**
+     * Largest response accepted by default: 8 MiB
+     */
+    const DEFAULT_MAX_RESPONSE_SIZE = 8388608;
+
+    /**
      * @var resource|null
      */
     private $stream;
@@ -72,6 +77,11 @@ class Client implements LoggerAwareInterface
      */
     private $delimiter;
 
+    /**
+     * @var int|null
+     */
+    private $maxResponseSize;
+
     public function __construct(string $host, int $port, SocketInterface $socketInterface)
     {
         $this->host = $host;
@@ -83,6 +93,7 @@ class Client implements LoggerAwareInterface
         $this->chunkSize = self::DEFAULT_CHUNK_SIZE;
         $this->pollInterval = self::DEFAULT_POLL_INTERVAL;
         $this->delimiter = null;
+        $this->maxResponseSize = self::DEFAULT_MAX_RESPONSE_SIZE;
     }
 
     public function setLogger(LoggerInterface $logger): void
@@ -114,6 +125,16 @@ class Client implements LoggerAwareInterface
     public function setConnectionLag(int $connectionLag): void
     {
         $this->setPollInterval($connectionLag);
+    }
+
+    /**
+     * A peer that keeps sending would otherwise be read until the process runs out of memory.
+     *
+     * @param int|null $maxResponseSize Largest response accepted, in bytes, or null for no limit
+     */
+    public function setMaxResponseSize(?int $maxResponseSize): void
+    {
+        $this->maxResponseSize = $maxResponseSize;
     }
 
     /**
@@ -187,7 +208,10 @@ class Client implements LoggerAwareInterface
             throw new ConnectionException("Not connected");
         }
 
-        $this->logger->debug(sprintf('TCP: Sending a request to %s...', $this->host), ['request' => $request]);
+        $this->logger->debug(
+            sprintf('TCP: Sending a request to %s...', $this->host),
+            ['length' => strlen($request->getBody())]
+        );
         $this->write($request->getBody() . "\r\n", $request->getTimeout());
 
         return new Response($this->read($request->getTimeout()));
@@ -246,6 +270,13 @@ class Client implements LoggerAwareInterface
         $timeStart = microtime(true);
 
         while (!$this->isComplete($data)) {
+            // checked on every iteration, so a peer that never pauses cannot hold the loop open
+            if ((microtime(true) - $timeStart) > $timeout) {
+                $this->disconnect();
+
+                throw new RequestException('Request timeout, incomplete response.');
+            }
+
             $chunk = fread($this->stream, $this->chunkSize);
 
             if (false === $chunk) {
@@ -256,6 +287,14 @@ class Client implements LoggerAwareInterface
 
             if ('' !== $chunk) {
                 $data .= $chunk;
+
+                if (null !== $this->maxResponseSize && strlen($data) > $this->maxResponseSize) {
+                    $this->disconnect();
+
+                    throw new RequestException(
+                        sprintf('Response too large, over %d bytes.', $this->maxResponseSize)
+                    );
+                }
 
                 continue;
             }
@@ -273,12 +312,6 @@ class Client implements LoggerAwareInterface
             if (null === $this->delimiter) {
                 // no delimiter to look for: a pause in the data flow marks the end of the response
                 break;
-            }
-
-            if ((microtime(true) - $timeStart) > $timeout) {
-                $this->disconnect();
-
-                throw new RequestException('Request timeout, incomplete response.');
             }
 
             usleep($this->pollInterval);
