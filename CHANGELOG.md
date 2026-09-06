@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Client::setMaxResponseSize()` and `Client::DEFAULT_MAX_RESPONSE_SIZE` — a response is now
   capped at 8 MiB by default and throws a `RequestException` beyond it. Pass `null` for the
   previous unlimited behaviour.
+- `StreamSocket` and `FSocket` take a second constructor argument, `$blocking`. The first
+  argument now only sets the read timeout; previously it decided both, so a positive timeout
+  forced a blocking stream. Defaults keep the old behaviour.
 
 ### Fixed
 - **Security:** neither transport pinned a scheme, so a host such as `udp://127.0.0.1` opened a
@@ -21,6 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The elapsed time is now checked on every iteration.
 - The debug log carried the whole `Request` object, putting the request body — credentials
   included — into the consumer's log. It now carries the body length.
+- `Client::connect()` accepts a `float` timeout. It had no parameter type and passed the value
+  to an `int` parameter, so `connect(0.5)` became `0` and raised an implicit-conversion
+  deprecation on PHP 8.1+.
+- A read is bounded by one timeout rather than two: the clock started after the initial wait had
+  already returned, so a request could take twice the timeout the caller asked for.
+- `phpunit.xml` no longer sets `stopOnFailure`, so a failing run reports every failure.
+
+### Changed
+- The no-response exception message is now `Request timeout, no response.` — it previously
+  carried a stray backslash. Code matching on that string needs updating.
+- `StreamSocket` and `FSocket` type their first constructor argument as `int`; a value that is
+  not an integer now raises a `TypeError` instead of being coerced. Same for
+  `Client::connect()`, which is now `float` and no longer accepts `null`.
 
 ## [1.2.2] — 2026-09-07
 
