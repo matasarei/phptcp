@@ -3,3 +3,5 @@
 .idea
 .phpunit.result.cache
 .claude/
+.gku/
+.tasks/

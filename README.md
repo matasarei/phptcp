@@ -136,8 +136,8 @@ The test suite runs against PHP 7.4–8.5 in CI.
 Locally, the easiest way is Docker — no PHP or Composer installation required:
 
 ```bash
-docker run --rm -v $(pwd):/app -w /app composer:lts composer install
-docker run --rm -v $(pwd):/app -w /app composer:lts vendor/bin/phpunit
+docker run --rm -v $(pwd):/app -w /app composer:2 composer install
+docker run --rm -v $(pwd):/app -w /app composer:2 vendor/bin/phpunit
 ```
 
 Or with a local PHP setup:
@@ -145,6 +145,12 @@ Or with a local PHP setup:
 ```bash
 composer install
 vendor/bin/phpunit
+```
+
+To check the dependencies against published advisories:
+
+```bash
+docker run --rm -v $(pwd):/app -w /app composer:2 composer audit
 ```
 
 ## License
