@@ -231,14 +231,16 @@ class ClientTest extends TestCase
         $client->setLogger($logger);
         $client->connect();
 
+        $body = 'secret-token-body';
+
         ServerStub::setResponse('response');
-        $client->request(new Request('secret-token-body', 1));
+        $client->request(new Request($body, 1));
 
         foreach ($contexts as $context) {
-            $this->assertStringNotContainsString('secret-token-body', var_export($context, true));
+            $this->assertStringNotContainsString($body, var_export($context, true));
         }
 
-        $this->assertContains(['length' => 17], $contexts);
+        $this->assertContains(['length' => strlen($body)], $contexts);
     }
 
     protected function setUp(): void
