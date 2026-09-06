@@ -6,14 +6,24 @@ use Matasar\PhpTcp\Exception\SocketException;
 
 class FSocket implements SocketInterface
 {
+    /**
+     * @var int
+     */
     private $blockingTimeout;
 
     /**
-     * @param int $blockingTimeout Blocking timeout in sec.
+     * @var bool
      */
-    public function __construct($blockingTimeout = 1)
+    private $blocking;
+
+    /**
+     * @param int $blockingTimeout Read timeout in sec., passed to stream_set_timeout()
+     * @param bool|null $blocking Whether the stream blocks; null keeps the old rule, blocking when the timeout is positive
+     */
+    public function __construct(int $blockingTimeout = 1, ?bool $blocking = null)
     {
         $this->blockingTimeout = $blockingTimeout;
+        $this->blocking = $blocking ?? $blockingTimeout > 0;
     }
 
     public function connect(string $host, string $port, ?float $timeout)
@@ -33,7 +43,7 @@ class FSocket implements SocketInterface
             throw new SocketException($errorMessage, $errorCode);
         }
 
-        stream_set_blocking($stream, $this->blockingTimeout > 0);
+        stream_set_blocking($stream, $this->blocking);
         stream_set_timeout($stream, $this->blockingTimeout);
 
         return $stream;

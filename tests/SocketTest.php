@@ -58,6 +58,30 @@ class SocketTest extends TestCase
         fclose($stream);
     }
 
+    public function socketClassProvider(): array
+    {
+        return [
+            'stream socket' => [StreamSocket::class],
+            'fsocket' => [FSocket::class],
+        ];
+    }
+
+    /**
+     * @dataProvider socketClassProvider
+     */
+    public function testTimeoutDoesNotDecideBlocking(string $class)
+    {
+        $port = (string) $this->serverPort();
+
+        $blocking = (new $class(5))->connect('127.0.0.1', $port, 1);
+        $this->assertTrue(stream_get_meta_data($blocking)['blocked']);
+        fclose($blocking);
+
+        $nonBlocking = (new $class(5, false))->connect('127.0.0.1', $port, 1);
+        $this->assertFalse(stream_get_meta_data($nonBlocking)['blocked']);
+        fclose($nonBlocking);
+    }
+
     protected function tearDown(): void
     {
         if (null !== $this->server) {
