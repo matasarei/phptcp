@@ -27,8 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Client::connect()` accepts a `float` timeout. It had no parameter type and passed the value
   to an `int` parameter, so `connect(0.5)` became `0` and raised an implicit-conversion
   deprecation on PHP 8.1+.
-- A read is bounded by one timeout rather than two: the clock started after the initial wait had
-  already returned, so a request could take twice the timeout the caller asked for.
+- A read no longer takes twice the timeout: the clock started after the initial wait had already
+  returned, so the wait and the read loop each got a full one. The remaining overshoot is the
+  socket's own read timeout, since the elapsed check sits before a blocking `fread()`.
 - `phpunit.xml` no longer sets `stopOnFailure`, so a failing run reports every failure.
 
 ### Changed
