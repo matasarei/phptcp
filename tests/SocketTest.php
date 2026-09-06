@@ -45,6 +45,19 @@ class SocketTest extends TestCase
         fclose($stream);
     }
 
+    /**
+     * @dataProvider socketProvider
+     */
+    public function testIpv6HostConnects(SocketInterface $socket)
+    {
+        $stream = $socket->connect('::1', (string) $this->serverPort('tcp://[::1]:0'), 1);
+
+        $this->assertIsResource($stream);
+        $this->assertStringStartsWith('tcp_socket', stream_get_meta_data($stream)['stream_type']);
+
+        fclose($stream);
+    }
+
     protected function tearDown(): void
     {
         if (null !== $this->server) {
@@ -53,14 +66,15 @@ class SocketTest extends TestCase
         }
     }
 
-    private function serverPort(): int
+    private function serverPort(string $address = 'tcp://127.0.0.1:0'): int
     {
-        $this->server = stream_socket_server('tcp://127.0.0.1:0', $errorCode, $errorMessage);
+        $this->server = @stream_socket_server($address, $errorCode, $errorMessage);
 
         if (false === $this->server) {
-            $this->markTestSkipped(sprintf('Unable to listen on 127.0.0.1: %s', $errorMessage));
+            $this->markTestSkipped(sprintf('Unable to listen on %s: %s', $address, $errorMessage));
         }
 
-        return (int) explode(':', stream_socket_get_name($this->server, false))[1];
+        // an IPv6 name is "[::1]:54321", so take what follows the last colon
+        return (int) substr(strrchr(stream_socket_get_name($this->server, false), ':'), 1);
     }
 }
