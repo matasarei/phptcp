@@ -198,6 +198,21 @@ class ClientTest extends TestCase
         $client->request(new Request('request', 5));
     }
 
+    public function testResponseAtTheSizeLimitIsAccepted()
+    {
+        ServerStub::setResponse('connected');
+
+        $client = $this->createClient();
+        $client->connect();
+
+        $body = str_repeat('a', 4096);
+
+        ServerStub::setResponse($body);
+        $client->setMaxResponseSize(4096);
+
+        $this->assertEquals($body, $client->request(new Request('request', 1))->getData());
+    }
+
     public function testTimeoutWhileDataKeepsArriving()
     {
         ServerStub::setResponse('connected');
