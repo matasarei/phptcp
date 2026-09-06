@@ -266,8 +266,8 @@ class Client implements LoggerAwareInterface
      */
     private function read(float $timeout): string
     {
-        $data = $this->wait($timeout);
         $timeStart = microtime(true);
+        $data = $this->wait($timeout);
 
         while (!$this->isComplete($data)) {
             // checked on every iteration, so a peer that never pauses cannot hold the loop open
@@ -357,7 +357,7 @@ class Client implements LoggerAwareInterface
             if ($timePassed > $timeout) {
                 $this->disconnect();
 
-                throw new RequestException('Request timeout \ no response.');
+                throw new RequestException('Request timeout, no response.');
             }
 
             usleep($this->pollInterval);
