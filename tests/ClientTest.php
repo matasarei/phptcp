@@ -5,6 +5,7 @@ use Matasar\PhpTcp\Exception\ConnectionException;
 use Matasar\PhpTcp\Exception\RequestException;
 use Matasar\PhpTcp\Request;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Stub\ServerStub;
 use Stub\SocketStub;
 
@@ -179,6 +180,65 @@ class ClientTest extends TestCase
         ServerStub::setResponse('connected');
 
         $this->assertEquals('connected', $client->connect()->getData());
+    }
+
+    public function testResponseSizeLimit()
+    {
+        ServerStub::setResponse('connected');
+
+        $client = $this->createClient();
+        $client->connect();
+
+        ServerStub::setFlood(true);
+        $client->setMaxResponseSize(65536);
+
+        $this->expectException(RequestException::class);
+        $this->expectExceptionMessage('Response too large, over 65536 bytes.');
+
+        $client->request(new Request('request', 5));
+    }
+
+    public function testTimeoutWhileDataKeepsArriving()
+    {
+        ServerStub::setResponse('connected');
+
+        $client = $this->createClient();
+        $client->connect();
+
+        ServerStub::setFlood(true);
+        $client->setChunkSize(1);
+        $client->setMaxResponseSize(null);
+
+        $this->expectException(RequestException::class);
+        $this->expectExceptionMessage('Request timeout, incomplete response.');
+
+        $client->request(new Request('request', 1));
+    }
+
+    public function testRequestBodyIsNotLogged()
+    {
+        ServerStub::setResponse('connected');
+
+        $contexts = [];
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->method('debug')->willReturnCallback(
+            function ($message, array $context = []) use (&$contexts) {
+                $contexts[] = $context;
+            }
+        );
+
+        $client = $this->createClient();
+        $client->setLogger($logger);
+        $client->connect();
+
+        ServerStub::setResponse('response');
+        $client->request(new Request('secret-token-body', 1));
+
+        foreach ($contexts as $context) {
+            $this->assertStringNotContainsString('secret-token-body', var_export($context, true));
+        }
+
+        $this->assertContains(['length' => 17], $contexts);
     }
 
     protected function setUp(): void

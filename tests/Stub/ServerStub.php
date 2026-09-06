@@ -51,6 +51,11 @@ class ServerStub
      */
     private static $writeLimit = 0;
 
+    /**
+     * @var bool
+     */
+    private static $flood = false;
+
     public static function start()
     {
         stream_wrapper_unregister('php');
@@ -72,6 +77,7 @@ class ServerStub
         self::$closed = false;
         self::$breakAfter = 0;
         self::$writeLimit = 0;
+        self::$flood = false;
     }
 
     /**
@@ -119,6 +125,14 @@ class ServerStub
     }
 
     /**
+     * @param bool $flood Answer every read with data and never a pause, as a peer that does not stop sending
+     */
+    public static function setFlood(bool $flood)
+    {
+        self::$flood = $flood;
+    }
+
+    /**
      * Removes sent request without finalizing line break
      *
      * @return string
@@ -140,6 +154,10 @@ class ServerStub
             self::$timeout--;
 
             return '';
+        }
+
+        if (self::$flood) {
+            return str_pad('', $count, '' === self::$response ? 'x' : self::$response);
         }
 
         $data = self::$response;

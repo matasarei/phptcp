@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `Client::setMaxResponseSize()` and `Client::DEFAULT_MAX_RESPONSE_SIZE` — a response is now
+  capped at 8 MiB by default and throws a `RequestException` beyond it. Pass `null` for the
+  previous unlimited behaviour.
+
+### Fixed
+- **Security:** neither transport pinned a scheme, so a host such as `udp://127.0.0.1` opened a
+  UDP socket. `StreamSocket` and `FSocket` now build a `tcp://` address and reject a host
+  containing `://` with a `SocketException`.
+- **Security:** the read timeout was only checked when a read came back empty, so a peer that
+  kept sending was never timed out and the response grew until the process ran out of memory.
+  The elapsed time is now checked on every iteration.
+- The debug log carried the whole `Request` object, putting the request body — credentials
+  included — into the consumer's log. It now carries the body length.
+
 ## [1.2.2] — 2026-09-07
 
 ### Changed
@@ -76,6 +93,7 @@ Initial release: a minimal TCP client (`Client`, `Request`, `Response`) with
 pluggable socket transports (`StreamSocket`, `FSocket`), configurable timeouts,
 chunked reads and PSR-3 logging.
 
+[Unreleased]: https://github.com/matasarei/php-tcp/compare/1.2.2...HEAD
 [1.2.2]: https://github.com/matasarei/php-tcp/compare/1.2.0...1.2.2
 [1.2.0]: https://github.com/matasarei/php-tcp/compare/1.1...1.2.0
 [1.1]: https://github.com/matasarei/php-tcp/compare/1.0...1.1
