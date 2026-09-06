@@ -18,7 +18,11 @@ class FSocket implements SocketInterface
 
     public function connect(string $host, string $port, ?float $timeout)
     {
-        $stream = fsockopen($host, $port, $errorCode, $errorMessage, $timeout);
+        if (false !== strpos($host, '://')) {
+            throw new SocketException(sprintf('Host must not contain a transport scheme, got "%s"', $host));
+        }
+
+        $stream = fsockopen('tcp://' . $host, $port, $errorCode, $errorMessage, $timeout);
 
         if (false === $stream) {
             throw new SocketException($errorMessage, $errorCode);
