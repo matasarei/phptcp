@@ -11,8 +11,9 @@ locally will catch 7.4-incompatible syntax — no constructor promotion, union t
 
 ## Commands
 
-The host has neither `php` nor `composer`; everything runs in `composer:2` (Composer 2.10.2,
-PHP 8.5.8). Not `composer:lts` — that tag is Composer 2.2, which has no `composer audit`.
+The host has neither `php` nor `composer`; everything runs in `composer:2` — a floating tag,
+currently Composer 2.10.x on PHP 8.5. Not `composer:lts`, which is Composer 2.2 and has no
+`composer audit`.
 
 | What | Command |
 |---|---|
