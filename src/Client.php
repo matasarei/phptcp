@@ -208,7 +208,10 @@ class Client implements LoggerAwareInterface
             throw new ConnectionException("Not connected");
         }
 
-        $this->logger->debug(sprintf('TCP: Sending a request to %s...', $this->host), ['request' => $request]);
+        $this->logger->debug(
+            sprintf('TCP: Sending a request to %s...', $this->host),
+            ['length' => strlen($request->getBody())]
+        );
         $this->write($request->getBody() . "\r\n", $request->getTimeout());
 
         return new Response($this->read($request->getTimeout()));
