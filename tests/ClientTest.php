@@ -258,6 +258,31 @@ class ClientTest extends TestCase
         $this->assertContains(['length' => strlen($body)], $contexts);
     }
 
+    public function testFractionalConnectionTimeout()
+    {
+        ServerStub::setResponse('connected');
+
+        $client = $this->createClient();
+
+        $deprecations = [];
+        set_error_handler(
+            function ($number, $message) use (&$deprecations) {
+                $deprecations[] = $message;
+
+                return true;
+            },
+            E_DEPRECATED
+        );
+
+        try {
+            $this->assertEquals('connected', $client->connect(0.5)->getData());
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame([], $deprecations);
+    }
+
     protected function setUp(): void
     {
         ServerStub::start();

@@ -2,40 +2,10 @@
 
 namespace Matasar\PhpTcp\Socket;
 
-use Matasar\PhpTcp\Exception\SocketException;
-
-class FSocket implements SocketInterface
+class FSocket extends AbstractSocket
 {
-    private $blockingTimeout;
-
-    /**
-     * @param int $blockingTimeout Blocking timeout in sec.
-     */
-    public function __construct($blockingTimeout = 1)
+    protected function open(string $host, string $port, ?float $timeout, &$errorCode, &$errorMessage)
     {
-        $this->blockingTimeout = $blockingTimeout;
-    }
-
-    public function connect(string $host, string $port, ?float $timeout)
-    {
-        if (false !== strpos($host, '://')) {
-            throw new SocketException(sprintf('Host must not contain a transport scheme, got "%s"', $host));
-        }
-
-        if (false !== strpos($host, ':') && '[' !== substr($host, 0, 1)) {
-            // an IPv6 literal: bracket it so its colons do not run into the port
-            $host = sprintf('[%s]', $host);
-        }
-
-        $stream = fsockopen('tcp://' . $host, $port, $errorCode, $errorMessage, $timeout);
-
-        if (false === $stream) {
-            throw new SocketException($errorMessage, $errorCode);
-        }
-
-        stream_set_blocking($stream, $this->blockingTimeout > 0);
-        stream_set_timeout($stream, $this->blockingTimeout);
-
-        return $stream;
+        return fsockopen('tcp://' . $host, $port, $errorCode, $errorMessage, $timeout);
     }
 }
