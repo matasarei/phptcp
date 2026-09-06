@@ -97,9 +97,9 @@ Treat these as blockers, not preferences.
   pattern rather than deleting a constant or method.
 - `vendor/`, `composer.lock`, `.phpunit.result.cache` and `.claude/` are generated or local;
   none are committed.
-- **Releasing** = tag + push. Packagist reads `composer.json` per tag, so the name in a tag's
-  `composer.json` must match the registered package (`matasarei/php-tcp`) or that version is
-  silently skipped. Update `CHANGELOG.md` in the same change.
+- **Releasing** = tag + push. Packagist takes the package name from the default branch and
+  serves every tag under it, including older tags whose own `composer.json` names something
+  else — so a rename does not orphan the history. Update `CHANGELOG.md` in the same change.
 - No database, no configuration file, no credentials anywhere in the repository.
 
 ### To confirm

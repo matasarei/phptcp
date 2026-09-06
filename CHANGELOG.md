@@ -35,8 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Package renamed from `matasarei/phptcp` to `matasarei/php-tcp`, and the repository renamed to
   match — install with `composer require matasarei/php-tcp`. The PHP namespace `Matasar\PhpTcp`
-  is unchanged, so no code changes are required. Versions 1.0–1.2.0 were published under the old
-  name; `matasarei/php-tcp` starts here, at 1.3.0.
+  is unchanged, so no code changes are required. Packagist serves the whole tag history under the
+  new name, so 1.0, 1.1 and 1.2.0 resolve there too, even though their own `composer.json` still
+  carries the old one.
 - The no-response exception message is now `Request timeout, no response.` — it previously
   carried a stray backslash. Code matching on that string needs updating.
 - `StreamSocket` and `FSocket` type their first constructor argument as `int`; a value that is
