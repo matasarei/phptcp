@@ -5,24 +5,26 @@ PHP's native stream functions; the only runtime dependency is the PSR-3 logger *
 There is nothing to run — the test suite is the entire runtime surface, and the public API is a
 published contract, so a signature change is a breaking change for consumers.
 
-**PHP 7.4 is the supported floor.** The host has no PHP, and the container ships 8.4, so nothing
+**PHP 7.4 is the supported floor.** The host has no PHP, and the container ships 8.5, so nothing
 locally will catch 7.4-incompatible syntax — no constructor promotion, union types, `mixed`,
 `match`, enums, `readonly`, nullsafe `?->` or first-class callables. Only CI proves it.
 
 ## Commands
 
-The host has neither `php` nor `composer`; everything runs in `composer:lts` (PHP 8.4.10).
+The host has neither `php` nor `composer`; everything runs in `composer:2` (Composer 2.10.2,
+PHP 8.5.8). Not `composer:lts` — that tag is Composer 2.2, which has no `composer audit`.
 
 | What | Command |
 |---|---|
-| Install | `docker run --rm -v "${PWD}":/app -w /app composer:lts composer install --no-interaction` |
-| Test | `docker run --rm -v "${PWD}":/app -w /app composer:lts vendor/bin/phpunit` |
-| One test | `… composer:lts vendor/bin/phpunit --filter <name>` |
-| Lint | `docker run --rm -v "${PWD}":/app -w /app composer:lts php -l <file>` |
+| Install | `docker run --rm -v "${PWD}":/app -w /app composer:2 composer install --no-interaction` |
+| Test | `docker run --rm -v "${PWD}":/app -w /app composer:2 vendor/bin/phpunit` |
+| One test | `… composer:2 vendor/bin/phpunit --filter <name>` |
+| Lint | `docker run --rm -v "${PWD}":/app -w /app composer:2 php -l <file>` |
+| Audit | `docker run --rm -v "${PWD}":/app -w /app composer:2 composer audit` |
 | Build | none — nothing is compiled |
 | Run | none — a library; drive it through the suite |
 
-A green local run only proves PHP 8.4. CI (`.github/workflows/tests.yml`) runs the suite on
+A green local run only proves PHP 8.5. CI (`.github/workflows/tests.yml`) runs the suite on
 7.4, 8.0, 8.1, 8.2, 8.3, 8.4 and 8.5 — that matrix is the real gate.
 
 `timeout`/`gtimeout` are both absent here, so a hung command cannot be bounded automatically —
