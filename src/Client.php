@@ -155,13 +155,13 @@ class Client implements LoggerAwareInterface
     }
 
     /**
-     * @param int $connectionTimeout Connection timeout in sec.
+     * @param float $connectionTimeout Connection timeout in sec., fractions allowed
      *
      * @return Response
      *
      * @throws ConnectionException
      */
-    public function connect($connectionTimeout = self::DEFAULT_TIMEOUT): Response
+    public function connect(float $connectionTimeout = self::DEFAULT_TIMEOUT): Response
     {
         if ($this->isConnected()) {
             throw new ConnectionException("Already connected");
@@ -257,14 +257,14 @@ class Client implements LoggerAwareInterface
     }
 
     /**
-     * @param int $timeout
+     * @param float $timeout Read timeout in sec., fractions allowed
      *
      * @return string
      *
      * @throws RequestException
      * @throws ConnectionException
      */
-    private function read(int $timeout): string
+    private function read(float $timeout): string
     {
         $data = $this->wait($timeout);
         $timeStart = microtime(true);
@@ -333,14 +333,14 @@ class Client implements LoggerAwareInterface
     }
 
     /**
-     * @param int $timeout
+     * @param float $timeout Wait timeout in sec., fractions allowed
      *
      * @return string Response start (first char)
      *
      * @throws RequestException
      * @throws ConnectionException
      */
-    private function wait(int $timeout): string
+    private function wait(float $timeout): string
     {
         $timeStart = microtime(true);
         $timePassed = 0;
