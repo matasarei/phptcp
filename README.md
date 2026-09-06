@@ -140,17 +140,17 @@ docker run --rm -v $(pwd):/app -w /app composer:2 composer install
 docker run --rm -v $(pwd):/app -w /app composer:2 vendor/bin/phpunit
 ```
 
-To check the dependencies against published advisories:
-
-```bash
-docker run --rm -v $(pwd):/app -w /app composer:2 composer audit
-```
-
 Or with a local PHP setup:
 
 ```bash
 composer install
 vendor/bin/phpunit
+```
+
+To check the dependencies against published advisories:
+
+```bash
+docker run --rm -v $(pwd):/app -w /app composer:2 composer audit
 ```
 
 ## License
