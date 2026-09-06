@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] — 2026-09-07
 
 ### Added
 - `Client::setMaxResponseSize()` and `Client::DEFAULT_MAX_RESPONSE_SIZE` — a response is now
@@ -33,20 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `phpunit.xml` no longer sets `stopOnFailure`, so a failing run reports every failure.
 
 ### Changed
+- Package renamed from `matasarei/phptcp` to `matasarei/php-tcp`, and the repository renamed to
+  match — install with `composer require matasarei/php-tcp`. The PHP namespace `Matasar\PhpTcp`
+  is unchanged, so no code changes are required. Versions 1.0–1.2.0 were published under the old
+  name; `matasarei/php-tcp` starts here, at 1.3.0.
 - The no-response exception message is now `Request timeout, no response.` — it previously
   carried a stray backslash. Code matching on that string needs updating.
 - `StreamSocket` and `FSocket` type their first constructor argument as `int`; a value that is
   not an integer now raises a `TypeError` instead of being coerced. Same for
   `Client::connect()`, which is now `float` and no longer accepts `null`.
-
-## [1.2.2] — 2026-09-07
-
-### Changed
-- Package renamed from `matasarei/phptcp` to `matasarei/php-tcp`, and the repository
-  renamed to match — install with `composer require matasarei/php-tcp`. The PHP
-  namespace `Matasar\PhpTcp` is unchanged, so no code changes are required.
-  Versions 1.0–1.2.0 were published under the old package name and remain available
-  only there; `matasarei/php-tcp` starts at 1.2.2.
 
 ## [1.2.0] — 2026-07-23
 
@@ -110,8 +105,7 @@ Initial release: a minimal TCP client (`Client`, `Request`, `Response`) with
 pluggable socket transports (`StreamSocket`, `FSocket`), configurable timeouts,
 chunked reads and PSR-3 logging.
 
-[Unreleased]: https://github.com/matasarei/php-tcp/compare/1.2.2...HEAD
-[1.2.2]: https://github.com/matasarei/php-tcp/compare/1.2.0...1.2.2
+[1.3.0]: https://github.com/matasarei/php-tcp/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/matasarei/php-tcp/compare/1.1...1.2.0
 [1.1]: https://github.com/matasarei/php-tcp/compare/1.0...1.1
 [1.0]: https://github.com/matasarei/php-tcp/releases/tag/1.0
