@@ -1,5 +1,5 @@
 {
-    "name": "matasarei/phptcp",
+    "name": "matasarei/php-tcp",
     "description": "Lightweight TCP client for PHP with pluggable socket transports, configurable timeouts, delimiter-based response framing and PSR-3 logging",
     "type": "library",
     "keywords": [
@@ -15,7 +15,7 @@
         "psr-3",
         "json-rpc"
     ],
-    "homepage": "https://github.com/matasarei/phptcp",
+    "homepage": "https://github.com/matasarei/php-tcp",
     "license": "MIT",
     "authors": [
         {
@@ -24,8 +24,8 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/matasarei/phptcp/issues",
-        "source": "https://github.com/matasarei/phptcp"
+        "issues": "https://github.com/matasarei/php-tcp/issues",
+        "source": "https://github.com/matasarei/php-tcp"
     },
     "require": {
         "php": ">=7.4",

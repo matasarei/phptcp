@@ -5,11 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.1] — 2026-08-20
+## [1.2.2] — 2026-09-07
 
 ### Changed
-- `composer.json` metadata enriched for Packagist indexing: keywords, fuller
-  description, homepage and support links. No code changes.
+- Package renamed from `matasarei/phptcp` to `matasarei/php-tcp`, and the repository
+  renamed to match — install with `composer require matasarei/php-tcp`. The PHP
+  namespace `Matasar\PhpTcp` is unchanged, so no code changes are required.
+  Versions 1.0–1.2.0 were published under the old package name and remain available
+  only there; `matasarei/php-tcp` starts at 1.2.2.
 
 ## [1.2.0] — 2026-07-23
 
@@ -73,7 +76,7 @@ Initial release: a minimal TCP client (`Client`, `Request`, `Response`) with
 pluggable socket transports (`StreamSocket`, `FSocket`), configurable timeouts,
 chunked reads and PSR-3 logging.
 
-[1.2.1]: https://github.com/matasarei/phptcp/compare/1.2.0...1.2.1
-[1.2.0]: https://github.com/matasarei/phptcp/compare/1.1...1.2.0
-[1.1]: https://github.com/matasarei/phptcp/compare/1.0...1.1
-[1.0]: https://github.com/matasarei/phptcp/releases/tag/1.0
+[1.2.2]: https://github.com/matasarei/php-tcp/compare/1.2.0...1.2.2
+[1.2.0]: https://github.com/matasarei/php-tcp/compare/1.1...1.2.0
+[1.1]: https://github.com/matasarei/php-tcp/compare/1.0...1.1
+[1.0]: https://github.com/matasarei/php-tcp/releases/tag/1.0
