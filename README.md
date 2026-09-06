@@ -1,6 +1,7 @@
 # PHP TCP Client
 
 [![Tests](https://github.com/matasarei/php-tcp/actions/workflows/tests.yml/badge.svg)](https://github.com/matasarei/php-tcp/actions/workflows/tests.yml)
+[![Latest Version](https://img.shields.io/packagist/v/matasarei/php-tcp.svg)](https://packagist.org/packages/matasarei/php-tcp)
 [![PHP Version Require](https://img.shields.io/packagist/dependency-v/matasarei/php-tcp/php.svg)](composer.json)
 [![License](https://img.shields.io/packagist/l/matasarei/php-tcp.svg)](LICENSE)
 
