@@ -1,9 +1,9 @@
 # PHP TCP Client
 
 [![Tests](https://github.com/matasarei/php-tcp/actions/workflows/tests.yml/badge.svg)](https://github.com/matasarei/php-tcp/actions/workflows/tests.yml)
-[![Latest Version](https://img.shields.io/packagist/v/matasarei/php-tcp.svg)](https://packagist.org/packages/matasarei/php-tcp)
-[![PHP Version Require](https://img.shields.io/packagist/dependency-v/matasarei/php-tcp/php.svg)](composer.json)
-[![License](https://img.shields.io/packagist/l/matasarei/php-tcp.svg)](LICENSE)
+[![Latest Version](https://img.shields.io/packagist/v/matasarei/php-tcp)](https://packagist.org/packages/matasarei/php-tcp)
+[![PHP Version Require](https://img.shields.io/packagist/dependency-v/matasarei/php-tcp/php)](composer.json)
+[![License](https://img.shields.io/packagist/l/matasarei/php-tcp)](LICENSE)
 
 A lightweight TCP client for PHP with no runtime dependencies beyond a PSR-3 logger interface.
 It wraps PHP's native stream functions in a small, testable API: pluggable socket transports,
