@@ -19,7 +19,8 @@ JSON-RPC over TCP, custom device or legacy service protocols, and similar.
   plus a one-method `SocketInterface` for custom transports
 - Optional end-of-response delimiter for line-based protocols (see [Response framing](#response-framing))
 - Detects broken streams and connections closed by the peer; completes partial writes
-- Configurable connection, request and read timeouts
+- Configurable connection, request and read timeouts, fractions of a second included
+- A response size limit, so a peer that keeps sending cannot exhaust memory (8 MiB by default)
 - PSR-3 (`psr/log` v1, v2 or v3) logger support for debugging
 
 ## Requirements
@@ -61,15 +62,23 @@ The difference is `stream_socket_client()` vs `fsockopen()` under the hood;
 pick whichever you prefer, or implement `Socket\SocketInterface` to supply your own
 (e.g. for TLS wrappers or unit-test stubs).
 
-Both transports accept a blocking timeout (seconds, default 1) that controls how long
-a single read waits for data before reporting "no data yet":
+Both transports take a read timeout (seconds, default 1) that controls how long a single read
+waits for data before reporting "no data yet", and an optional blocking flag:
 
 ```php
 use Matasar\PhpTcp\Socket\FSocket;
 
-new FSocket(2); // wait up to 2 seconds per read cycle
-new FSocket(0); // non-blocking mode
+new FSocket(2);        // wait up to 2 seconds per read cycle
+new FSocket(0);        // non-blocking mode
+new FSocket(2, false); // non-blocking, but still a 2 second read timeout
 ```
+
+The second argument defaults to `null`, which means "blocking when the timeout is positive" —
+the rule the first argument used to decide on its own.
+
+The host is the address only: a value carrying a scheme, such as `udp://198.51.100.7`, is
+rejected rather than quietly opening something other than a TCP socket. IPv6 literals are
+accepted as-is (`::1`).
 
 ## Client settings
 
@@ -79,12 +88,14 @@ use Matasar\PhpTcp\Socket\FSocket;
 
 $client = new Client('hostname', 1234, new FSocket());
 
-$client->setChunkSize(16384);        // read data by 16 KB per cycle (default 8 KB).
-$client->setPollInterval(5000);      // wait 5 ms between data availability checks (default 1 ms).
-$client->setDelimiter("\n");         // treat "\n" as the end of a response (see below).
-$client->setLogger(new PsrLogger()); // any PSR-3 logger, for debugging.
+$client->setChunkSize(16384);          // read data by 16 KB per cycle (default 8 KB).
+$client->setPollInterval(5000);        // wait 5 ms between data availability checks (default 1 ms).
+$client->setDelimiter("\n");           // treat "\n" as the end of a response (see below).
+$client->setMaxResponseSize(65536);    // refuse a response over 64 KB (default 8 MiB, null for no limit).
+$client->setLogger(new PsrLogger());   // any PSR-3 logger, for debugging.
 
-$client->connect(5); // connection timeout in seconds (default 2).
+$client->connect(5);   // connection timeout in seconds (default 2).
+$client->connect(0.5); // fractions are allowed.
 ```
 
 ## Response framing
@@ -113,7 +124,7 @@ All exceptions live under `Matasar\PhpTcp\Exception`:
 | Exception             | Thrown when                                                                    |
 |-----------------------|--------------------------------------------------------------------------------|
 | `ConnectionException` | Connection could not be established, is already open, was closed by the peer, or the stream broke mid-transfer. |
-| `RequestException`    | No (or no complete) response arrived within the request timeout.               |
+| `RequestException`    | No (or no complete) response arrived within the request timeout, or the response exceeded the size limit. |
 | `SocketException`     | Low-level transport failure; wrapped into `ConnectionException` by `connect()`. |
 
 ```php
