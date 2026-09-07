@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] — 2026-09-07
+
+### Fixed
+- A read timeout was reported as a broken connection on PHP 8.1 and newer. `fread()` returns
+  `false` there where earlier versions returned an empty string, and the client took that for a
+  dead stream — so the default framing mode, which ends a response on a quiet interval, threw
+  `ConnectionException: Request failed, broken connection.` on every request against a real
+  socket. A timeout is now told apart from a broken stream by
+  `stream_get_meta_data()['timed_out']`.
+
+  Present since 1.0 and dormant until PHP 8.1 changed the return value. The suite missed it
+  because it drives the client through a `php://` stream wrapper, whose read cannot return
+  `false`; a socket-pair test now covers the real thing.
+
 ## [1.3.0] — 2026-09-07
 
 ### Added
@@ -106,6 +120,7 @@ Initial release: a minimal TCP client (`Client`, `Request`, `Response`) with
 pluggable socket transports (`StreamSocket`, `FSocket`), configurable timeouts,
 chunked reads and PSR-3 logging.
 
+[1.3.1]: https://github.com/matasarei/php-tcp/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/matasarei/php-tcp/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/matasarei/php-tcp/compare/1.1...1.2.0
 [1.1]: https://github.com/matasarei/php-tcp/compare/1.0...1.1

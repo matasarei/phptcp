@@ -277,7 +277,7 @@ class Client implements LoggerAwareInterface
                 throw new RequestException('Request timeout, incomplete response.');
             }
 
-            $chunk = fread($this->stream, $this->chunkSize);
+            $chunk = $this->readChunk($this->chunkSize);
 
             if (false === $chunk) {
                 $this->disconnect();
@@ -323,6 +323,33 @@ class Client implements LoggerAwareInterface
         return $data;
     }
 
+    /**
+     * PHP 8.1 changed what fread() returns when a stream hits its read timeout: false, where
+     * earlier versions returned an empty string. A timeout means "nothing yet", not a broken
+     * stream, so it is reported the way it always was.
+     *
+     * @param int $length
+     *
+     * @return string|false
+     */
+    private function readChunk(int $length)
+    {
+        $chunk = fread($this->stream, $length);
+
+        if (false === $chunk && $this->hasTimedOut()) {
+            return '';
+        }
+
+        return $chunk;
+    }
+
+    private function hasTimedOut(): bool
+    {
+        $meta = stream_get_meta_data($this->stream);
+
+        return !empty($meta['timed_out']);
+    }
+
     private function isComplete(string $data): bool
     {
         if (null === $this->delimiter) {
@@ -345,7 +372,7 @@ class Client implements LoggerAwareInterface
         $timeStart = microtime(true);
         $timePassed = 0;
 
-        while (($response = fread($this->stream, 1)) === '') {
+        while (($response = $this->readChunk(1)) === '') {
             if (feof($this->stream)) {
                 $this->disconnect();
 
